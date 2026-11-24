@@ -200,7 +200,7 @@ open class KeyboardService : Service() {
         val tap = PendingIntent.getActivity(this, FALLBACK_ID, keyboardIntent(token, manual = true),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_CANCEL_CURRENT)
         notifications.notify(FALLBACK_ID, Notification.Builder(this, FALLBACK_CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setSmallIcon(R.drawable.keyflow_glyph)
             .setContentTitle(getString(R.string.keyboard_ready))
             .setContentIntent(tap)
             .setAutoCancel(true)
@@ -217,7 +217,7 @@ open class KeyboardService : Service() {
         val stop = PendingIntent.getService(this, 2, Intent(this, javaClass).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return Notification.Builder(this, ONGOING_CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setSmallIcon(R.drawable.keyflow_glyph)
             .setContentTitle(getString(R.string.service_running))
             .setContentIntent(setup)
             .addAction(Notification.Action.Builder(null, getString(R.string.keyboard_open), manual).build())

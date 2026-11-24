@@ -21,6 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import io.keyflow.remotekeyboard.KeyFlowTheme
 
 class KeyboardActivity : ComponentActivity() {
     private var requested by mutableStateOf<FocusToken?>(null)
@@ -50,8 +52,9 @@ class KeyboardActivity : ComponentActivity() {
         }
         val settings = KeyboardSettings(this)
         setContent {
-            MaterialTheme {
-                Surface(Modifier.fillMaxSize().systemBarsPadding()) {
+            KeyFlowTheme {
+                Surface(Modifier.fillMaxSize().systemBarsPadding(), color = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface) {
                     val target = KeyboardRuntime.focus
                     BackHandler { dismiss() }
                     LaunchedEffect(target, resumed) {

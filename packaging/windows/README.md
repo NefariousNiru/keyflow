@@ -11,7 +11,7 @@ Run the Windows app as a standard interactive user. Installing the rule is an ad
 ```
 
 The inbound rule allows TCP 48732 and 48733 for that executable on the named Wireless interface, Private profile and LocalSubnet only. Edge traversal is blocked. The app also checks its selected profile and on-link endpoints. Pass `-Remove` with the same executable path to remove the rule. Use the published M2 harness path in place of the app path for the physical LAN test.
-For a Public profile, include the phone address and use the same value in **Keyflow → Trusted Wi-Fi**. Enter the desktop Wi-Fi IPv4 address in the Android app.
+For a Public profile, include the phone address and use the same value in **KeyFlow → Trusted Wi-Fi**. Enter the desktop Wi-Fi IPv4 address in the Android app.
 
 ```powershell
 & .\packaging\windows\Set-KeyflowFirewall.ps1 -Program .\artifacts\windows\RemoteKeyboard.Windows.exe -InterfaceAlias 'Wi-Fi' -PublicPeer 'PHONE-IPV4'

@@ -2,6 +2,7 @@ package io.keyflow.remotekeyboard.keyboard
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -213,9 +214,11 @@ private fun KeyTile(
     val background = when {
         !enabled -> colors.surfaceVariant.copy(alpha = 0.45f)
         pressed || selected -> colors.primaryContainer
-        else -> colors.surfaceVariant
+        else -> colors.surfaceVariant.copy(alpha = 0.84f)
     }
-    Box(modifier.heightIn(min = 42.dp).clip(RoundedCornerShape(8.dp)).background(background)
+    val shape = RoundedCornerShape(10.dp)
+    Box(modifier.heightIn(min = 42.dp).clip(shape).background(background)
+        .border(1.dp, colors.outlineVariant.copy(alpha = 0.7f), shape)
         .semantics {
             role = Role.Button
             contentDescription = description

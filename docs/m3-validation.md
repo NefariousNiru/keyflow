@@ -15,13 +15,7 @@ The Windows 10 build 19045 x64 host and LAVA LXX503 running Android 14 used the 
 | Reboot | ADB rebooted the LAVA and confirmed Android completed startup, the secure keyguard was present and the KeyFlow service had no service record. A fresh foreground start after unlock remains to be verified. |
 | Android and Windows builds | Android debug, instrumentation and unsigned release builds and debug lint passed. The Android JVM unit task had no source. Windows Release build, core checks and self-contained x64 harness publish passed. Native Windows loopback verified TLS 1.2 pinning, link-policy loss and held-key release, heartbeat and watchdog. |
 
-## Pending release validation
-
-- Complete Android companion chooser consent with a discoverable Windows Bluetooth desktop. Verify the association can be removed, the associated app can launch from background where Android allows it, and the opt-in wake flags present the keyboard above secure keyguard while keeping input disabled. Confirm the notification path with Bluetooth unavailable or the association removed.
-- Measure natural Doze and battery drain against idle baseline. Validate battery saver, force-stop recovery and Samsung-specific background and power management. Verify notification-denied UX, other supported Android versions and Windows 11 in the release matrix.
-- Verify persistent trust by explicitly restarting the connection after a reboot and unlock.
-- Validate keyboard behavior on released APK builds, including touch-held modifiers on hardware, haptic feedback, and latency. The M4 Windows integration still needs native focus and SendInput validation.
-- All open M1 and M2 release requirements remain in force.
+Remaining release validation is tracked in [M6](../MILESTONE.md#m6--packaging-release-and-documentation).
 
 ## Reproduce
 

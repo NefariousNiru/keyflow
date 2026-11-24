@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,7 +18,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,6 +63,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_KeyFlow)
         super.onCreate(savedInstanceState)
         preferences = WifiPreferences(this)
         settings = KeyboardSettings(this)
@@ -68,13 +73,18 @@ class MainActivity : ComponentActivity() {
         wake = settings.wake
         haptics = settings.haptics
         setContent {
-            MaterialTheme {
-                Surface {
+            KeyFlowTheme {
+                Surface(color = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface) {
                     Column(
                         Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Image(painterResource(R.drawable.keyflow_icon), contentDescription = null,
+                                modifier = Modifier.size(40.dp))
+                            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+                        }
                         if (!permission) {
                             Text(stringResource(R.string.wifi_permissions_message))
                             Button(onClick = ::requestWifiPermissions) { Text(stringResource(R.string.wifi_permissions)) }

@@ -15,7 +15,7 @@ if (-not [Security.Principal.WindowsPrincipal]::new($identity).IsInRole(
 
 $exe = [IO.Path]::GetFullPath($Program)
 if ([IO.Path]::GetFileName($exe) -notin 'RemoteKeyboard.Windows.exe','RemoteKeyboard.Windows.Spike.exe') {
-    throw 'Use the Keyflow executable or the published M2 validation harness.'
+    throw 'Use the KeyFlow executable or the published M2 validation harness.'
 }
 $identityBytes = [Text.Encoding]::UTF8.GetBytes($exe.ToUpperInvariant())
 $hash = [Security.Cryptography.SHA256]::Create()
@@ -30,7 +30,7 @@ if ($Remove) {
     }
     return
 }
-if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Keyflow executable was not found.' }
+if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'KeyFlow executable was not found.' }
 $adapter = Get-NetAdapter -Name $InterfaceAlias -Physical
 $profiles = @(Get-NetConnectionProfile -InterfaceIndex $adapter.ifIndex)
 if ($adapter.Status -ne 'Up' -or $adapter.MediaType -ne 'Native 802.11' -or
@@ -83,6 +83,6 @@ if ($PSCmdlet.ShouldProcess($exe, "Install $category Wi-Fi TCP rule")) {
     if (Get-NetFirewallRule -Name $name -ErrorAction SilentlyContinue) {
         Set-NetFirewallRule -Name $name @scope
     } else {
-        New-NetFirewallRule -Name $name -DisplayName "Keyflow on selected $category Wi-Fi" @scope | Out-Null
+        New-NetFirewallRule -Name $name -DisplayName "KeyFlow on selected $category Wi-Fi" @scope | Out-Null
     }
 }
