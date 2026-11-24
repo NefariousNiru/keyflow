@@ -4,8 +4,11 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <PlatformTarget>x64</PlatformTarget>
+    <Product>KeyFlow</Product>
+    <ApplicationIcon>KeyFlow.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../RemoteKeyboard.Core/RemoteKeyboard.Core.csproj" />
+    <EmbeddedResource Include="KeyFlow.ico" />
   </ItemGroup>
 </Project>

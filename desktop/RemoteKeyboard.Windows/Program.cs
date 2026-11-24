@@ -15,11 +15,12 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
+        using var icon = new Icon(typeof(Program), "KeyFlow.ico");
         using var menu = new ContextMenuStrip();
         using var tray = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
-            Text = "Keyflow",
+            Icon = icon,
+            Text = "KeyFlow",
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -93,7 +94,7 @@ internal static class Program
                     {
                         if (!link.IsPublic)
                             Select(link.Selection);
-                        else if (ChoosePublicPeer(link, selection?.PublicPeer) is { } chosen)
+                        else if (ChoosePublicPeer(link, selection?.PublicPeer, icon) is { } chosen)
                             Select(chosen);
                     };
                     networks.DropDownItems.Add(choice);
@@ -113,7 +114,7 @@ internal static class Program
             {
                 var address = host.Listening?.Address;
                 if (address is not null && host.ArmPairing() is { } code)
-                    MessageBox.Show($"Desktop IP {address}\nPairing code {code}\nExpires after two minutes.", "Keyflow");
+                    MessageBox.Show($"Desktop IP {address}\nPairing code {code}\nExpires after two minutes.", "KeyFlow");
             });
             pair.Enabled = host.Listening is not null;
 
@@ -132,14 +133,19 @@ internal static class Program
         }
     }
 
-    private static WifiSelection? ChoosePublicPeer(WifiLink link, string? existing)
+    private static WifiSelection? ChoosePublicPeer(WifiLink link, string? existing, Icon icon)
     {
         using var dialog = new Form
         {
-            Text = "Keyflow on Public Wi-Fi", ClientSize = new Size(390, 140),
+            Text = "KeyFlow on Public Wi-Fi", Icon = icon, ClientSize = new Size(390, 140),
             FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.CenterScreen,
             MinimizeBox = false, MaximizeBox = false
         };
+        if (!SystemInformation.HighContrast)
+        {
+            dialog.BackColor = Color.FromArgb(237, 242, 252);
+            dialog.ForeColor = Color.FromArgb(24, 31, 53);
+        }
         using var explanation = new Label
         {
             Text = "Enter the phone's Wi-Fi IPv4 address. Use the same address in the scoped firewall rule.",

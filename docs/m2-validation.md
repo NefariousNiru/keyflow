@@ -13,9 +13,8 @@ The Windows 10 build 19045 host and LAVA LXX503 running Android 14 were connecte
 | M1 regression | Desktop protocol, pairing-window, TLS pin rejection and session-authorization checks passed. Android protocol and session-authorization instrumentation passed on the LAVA. |
 | Windows firewall | The script declares a program-, port-, interface- and profile-scoped rule. Public uses one exact phone IPv4 address. The scripts passed syntax checks. B10 already permitted the test connection. This run did not install a rule or test its enforcement. |
 | Direct Public Wi-Fi pairing and reconnect | LAVA paired with the Windows harness over B10 using manual desktop IPv4 and sent authenticated synthetic input. After the runner disabled and restored the phone Wi-Fi, the client automatically authenticated again and sent fresh synthetic input. The original pairing timestamp was unchanged. ADB controlled the phone, with no forwarding of the test connection. |
-| Release validation | Private Wi-Fi mDNS/NSD interoperability, installed firewall-rule enforcement, actual DHCP lease changes, roaming, a separate untrusted AP, VPN LAN-allowed and LAN-blocked profiles, AP isolation, sleep/resume, Windows 11, Samsung and Android 17 local-network permissions remain pending. No VPN or router test setup was available during this run. |
 
-The M2 development gate passed on the available Windows 10 and LAVA setup. Public Wi-Fi requires explicit selection and one approved peer address. Unsupported or blocked paths fail closed. The pending cases above remain release requirements.
+The M2 development gate passed on the available Windows 10 and LAVA setup. Public Wi-Fi requires explicit selection and one approved peer address. Unsupported or blocked paths fail closed. Remaining release validation is tracked in [M6](../MILESTONE.md#m6--packaging-release-and-documentation).
 
 ## Reproduce
 

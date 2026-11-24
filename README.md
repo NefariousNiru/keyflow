@@ -1,6 +1,6 @@
-# Keyflow
+# KeyFlow
 
-Keyflow is a local-only Android keyboard for Windows under development. M0 bootstraps a WinForms tray executable and an Android Compose activity. Pairing, network transport and remote input are planned in later milestones.
+KeyFlow is a local-only Android keyboard for Windows under development. The Android keyboard pairs with Windows and exchanges authenticated input over selected Wi-Fi. Native Windows focus and input integration is scheduled for M4.
 
 ## Development on Windows
 

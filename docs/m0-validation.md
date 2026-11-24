@@ -8,14 +8,15 @@
 | Android build | Gradle 9.3.1 with JDK 17, Android Platform 37 and Build Tools 36.0.0 passed `lintDebug` (zero errors, six warnings), `assembleDebug` and `assembleRelease`. `testDebugUnitTest` completed as NO-SOURCE. APK manifests confirm both probes and the notification permission are debug-only. |
 | GitHub Actions | Baseline workflow added. Hosted runs pending. |
 | LAVA LXX503, Android 14 (API 34) | Debug APK installed over authorized USB and cold-launched. Build LAVA_LXX503_SW_U_V09_HW_V1.0_20250725, awake and unlocked, Battery Saver off and device idle state ACTIVE. |
-| LAVA foreground activation | The delayed synthetic trigger opened Keyflow while the probe activity was visible. |
+| LAVA foreground activation | The delayed synthetic trigger opened KeyFlow while the probe activity was visible. |
 | LAVA background activation | After Home, Android logged a background activity start denial, the launcher stayed foreground, and the probe posted its notification. |
-| LAVA notification fallback | With notification permission granted, tapping the displayed test notification opened Keyflow. Temporary permission changes were reverted. |
+| LAVA notification fallback | With notification permission granted, tapping the displayed test notification opened KeyFlow. Temporary permission changes were reverted. |
 | LAVA screen off and secure keyguard | In the repeat run, the phone was asleep at the start and end of the probe interval and the notification was active. After an explicit ADB wake, Android reported the secure keyguard showing. No unlock was attempted. The first screen-off run ended awake and did not establish an uninterrupted screen-off interval. |
 | LAVA forced deep Doze | Android reported deep IDLE and an asleep display while the probe notification was active. Forced idle was reverted. Natural Doze timing and a tap from the locked state remain untested. |
 | LAVA companion feature | Android advertises android.software.companion_device_setup. Association and any background-start exemption remain untested. |
-| Physical Samsung | Foreground, background, screen off, secure keyguard, Doze, companion eligibility, notification tap and OEM power management pending. |
-| Pairing primitive, Windows 10 and LAVA | Bouncy Castle .NET 2.7.0 and Java 1.87 completed all three J-PAKE rounds over USB. Both endpoints confirmed matching synthetic codes and rejected mismatched codes. The probe creates no device pins or authenticated TLS session. Production transcript and device-key binding review remains open. See the [pairing ADR](adr/0001-m0-architecture.md). |
+| Pairing primitive, Windows 10 and LAVA | Bouncy Castle .NET 2.7.0 and Java 1.87 completed all three J-PAKE rounds over USB. Both endpoints confirmed matching synthetic codes and rejected mismatched codes. The probe creates no device pins or authenticated TLS session. M1 subsequently implemented and tested production transcript and device-key binding. See the [pairing ADR](adr/0001-m0-architecture.md). |
+
+Remaining release validation is tracked in [M6](../MILESTONE.md#m6--packaging-release-and-documentation).
 
 For Android, record device model, OS build, prior activity state, permissions and battery mode. Use synthetic local triggers. Record whether the surface opens automatically, opens on notification tap, or remains blocked. For Windows, record OS build, runtime, app and privilege level. Use synthetic text and report metadata and outcomes only. Record actual TLS versions and cipher suites for each tested connection. GitHub-hosted Windows runners provide build evidence only.
 
@@ -29,7 +30,7 @@ dotnet run --project desktop/tests/RemoteKeyboard.Windows.Spike -c Release -- --
 ```
 ## Reproduce the Android probe
 
-Install the debug APK on an authorized USB device and grant notifications for Keyflow. Start the probe while the device is awake and unlocked. It waits 20 seconds, requests a local activity start and posts a test notification. For the background case, force-stop Keyflow before starting a fresh probe, then press Home during the wait. If the launcher remains foreground, tap **Open Keyflow test** in the notification shade to check the fallback.
+Install the debug APK on an authorized USB device and grant notifications for KeyFlow. Start the probe while the device is awake and unlocked. It waits 20 seconds, requests a local activity start and posts a test notification. For the background case, force-stop KeyFlow before starting a fresh probe, then press Home during the wait. If the launcher remains foreground, tap **Open KeyFlow test** in the notification shade to check the fallback.
 
 ```powershell
 adb shell am start -W -n io.keyflow.remotekeyboard/.ActivationProbeActivity

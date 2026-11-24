@@ -1,0 +1,4 @@
+<resources>
+    <color name="keyflow_launch_background">#171D33</color>
+    <bool name="keyflow_light_bars">false</bool>
+</resources>

@@ -14,7 +14,7 @@ Tested on Windows 10 Pro 22H2 build 19045 x64 with .NET SDK 10.0.404 and LAVA LX
 | Component tests | Six desktop focus policy cases passed, plus framing, malformed UTF-8 and sizes, authorization, sequence gaps, stale focus, owned-key release, and OTP arming, throttling, single use, cooldown and expiry checks. Android framing and authorization instrumentation passed. Windows loopback TLS rejected wrong pins in both roles. |
 | Builds and dependencies | .NET Release solution built with zero warnings and errors, self-contained Windows x64 publish passed, and NuGet reported no vulnerable packages from the configured source. Android debug, unsigned release and instrumentation builds and lint passed. The Android JVM unit-test task returned NO-SOURCE. |
 
-Direct LAN connectivity and recovery are M2 work. The pairing and input harness does not install a LAN listener, inject real keyboard input, or test the production pairing UI. Windows 11, Samsung, full Windows security-boundary and other device validations remain pending release requirements. No hosted CI result is claimed.
+Direct LAN connectivity and recovery are M2 work. The pairing and input harness does not install a LAN listener, inject real keyboard input, or test the production pairing UI. Remaining release validation is tracked in [M6](../MILESTONE.md#m6--packaging-release-and-documentation).
 
 ## Reproduce
 

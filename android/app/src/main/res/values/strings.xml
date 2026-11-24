@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">Keyflow</string>
-    <string name="wifi_permissions_message">Allow access to Wi-Fi identity and local devices to connect Keyflow.</string>
+    <string name="app_name">KeyFlow</string>
+    <string name="wifi_permissions_message">Allow access to Wi-Fi identity and local devices to connect KeyFlow.</string>
     <string name="wifi_permissions">Allow Wi-Fi access</string>
     <string name="wifi_trust">Trust current Wi-Fi</string>
     <string name="wifi_forget">Forget trusted Wi-Fi</string>
@@ -17,4 +17,20 @@
     <string name="lan_no_address">Desktop discovery found no address. Enter the desktop IP.</string>
     <string name="lan_blocked">Local access blocked or desktop unavailable. Check Wi-Fi, firewall or VPN policy.</string>
     <string name="wifi_current">Current Wi-Fi %1$s</string>
+    <string name="service_channel">Desktop connection</string>
+    <string name="keyboard_channel">Keyboard requests</string>
+    <string name="service_running">KeyFlow is listening for your desktop</string>
+    <string name="service_start">Start connection</string>
+    <string name="service_stop">Stop connection</string>
+    <string name="service_failed">Android could not start the connection. Check permissions and location settings.</string>
+    <string name="keyboard_ready">Desktop keyboard is ready</string>
+    <string name="keyboard_open">Open keyboard</string>
+    <string name="keyboard_wake">Allow waking and lock-screen display</string>
+    <string name="keyboard_haptics">Keyboard feedback</string>
+    <string name="keyboard_associate">Associate desktop for automatic activation</string>
+    <string name="keyboard_associated">Desktop association active</string>
+    <string name="keyboard_association_failed">Android did not approve the desktop association.</string>
+    <string name="keyboard_notifications">Allow keyboard notifications</string>
+    <string name="service_stopped">Desktop connection is stopped.</string>
+    <string name="keyboard_bluetooth_name">Discoverable Windows Bluetooth name</string>
 </resources>

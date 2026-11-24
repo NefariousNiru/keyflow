@@ -1,0 +1,16 @@
+<resources>
+    <color name="keyflow_launch_background">#EDF2FC</color>
+    <bool name="keyflow_light_bars">true</bool>
+
+    <style name="Theme.KeyFlow" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/keyflow_launch_background</item>
+        <item name="android:statusBarColor">@color/keyflow_launch_background</item>
+        <item name="android:navigationBarColor">@color/keyflow_launch_background</item>
+        <item name="android:windowLightStatusBar">@bool/keyflow_light_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/keyflow_light_bars</item>
+    </style>
+
+    <style name="Theme.KeyFlow.Launch">
+        <item name="android:windowBackground">@drawable/keyflow_starting_window</item>
+    </style>
+</resources>
