@@ -39,4 +39,4 @@ jobs:
           $sdkManager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager.bat'
           & $sdkManager 'platforms;android-37.0' 'build-tools;36.0.0'
           exit $LASTEXITCODE
-      - run: .\gradlew.bat --no-daemon lintDebug testDebugUnitTest assembleDebug
+      - run: .\gradlew.bat --no-daemon lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest

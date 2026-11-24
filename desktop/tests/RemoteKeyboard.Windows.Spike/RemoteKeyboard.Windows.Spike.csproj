@@ -6,4 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../RemoteKeyboard.Windows/RemoteKeyboard.Windows.csproj" />
+  </ItemGroup>
 </Project>

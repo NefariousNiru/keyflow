@@ -17,3 +17,4 @@ foreach (var (name, metadata, expected) in cases)
 }
 
 Console.WriteLine($"Passed {cases.Length} synthetic focus policy cases.");
+await ProtocolChecks.RunAsync();
