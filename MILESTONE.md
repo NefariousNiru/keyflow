@@ -3,13 +3,13 @@
 Follow AGENTS.md. Each gate is mandatory unless explicitly scoped experimental. Check boxes only after recording actual evidence. Windows 10 22H2 x64 and Windows 11 x64 are mandatory production targets. Develop on Windows; no Linux components. Do not build the full product in one change.
 
 ## M0 — Scaffold and risk discovery
-- [ ] Scaffold monorepo, .NET solution/core/Windows agent/tests, Android Gradle project, protocol and docs; add baseline Windows/Android CI.
+- [x] Scaffold monorepo, .NET solution/core/Windows agent/tests, Android Gradle project, protocol and docs; add baseline Windows/Android CI.
 - [ ] ADRs: transport/framing, authenticated OTP pairing library and interoperability, OS adapters, trusted network and privacy threat model.
 - [ ] Physical Android spike: test foreground/background, screen off, secure lock screen, Doze, companion eligibility, notification fallback and Samsung power management using local synthetic triggers. No production unauthenticated network endpoint.
 - [ ] Tiny Windows spike: UIA focus metadata and SendInput with ordinary apps; record elevated and secure desktop boundaries. Run on both Windows 10 22H2 and Windows 11; verify runtime, UIA, injection and TLS compatibility (TLS 1.2 ECDHE/AEAD on Windows 10; prefer TLS 1.3 on Windows 11). Record untested cases as pending.
 - Gate: documented activation matrix and viable secure pairing design; if auto-wake impossible on target device, keep notification fallback and explicitly record degraded UX.
 
-M0 initialization evidence is recorded in [the validation matrix](docs/m0-validation.md). The Windows Release build, synthetic focus-policy cases and self-contained publish passed on build 19045. Android debug APK assembly passed with JDK 17 and Android Platform 37. Android lint and unit tests remain pending. Pairing interoperability and physical OS/device validation remain open.
+M0 initialization evidence is recorded in [the validation matrix](docs/m0-validation.md). The Windows Release build, synthetic focus-policy cases and self-contained publish passed on build 19045. Android lint and debug/unsigned release APK assembly passed. The Android unit-test task reported NO-SOURCE. Windows 10 synthetic UIA, SendInput and TLS probes passed. The LAVA showed a foreground launch and notification-tap fallback after the OS denied direct background activation. Secure pairing interoperability, Windows 11, Windows security boundaries and the full physical Android activation matrix remain open.
 
 ## M1 — Protocol and secure transport
 - [ ] Define versioned messages: handshake/capabilities, focus state/generation, key down/up, text commit, release-all, heartbeat, errors, pause. Strict limits and canonical key mapping.

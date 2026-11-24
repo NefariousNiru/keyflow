@@ -2,4 +2,5 @@
   <Project Path="RemoteKeyboard.Core/RemoteKeyboard.Core.csproj" />
   <Project Path="RemoteKeyboard.Windows/RemoteKeyboard.Windows.csproj" />
   <Project Path="tests/RemoteKeyboard.Core.Tests/RemoteKeyboard.Core.Tests.csproj" />
+  <Project Path="tests/RemoteKeyboard.Windows.Spike/RemoteKeyboard.Windows.Spike.csproj" />
 </Solution>
