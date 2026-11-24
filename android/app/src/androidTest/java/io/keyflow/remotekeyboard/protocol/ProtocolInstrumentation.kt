@@ -2,6 +2,8 @@ package io.keyflow.remotekeyboard.protocol
 
 import android.app.Activity
 import android.app.Instrumentation
+import android.content.Intent
+import io.keyflow.remotekeyboard.LanTestSurface
 import android.os.Bundle
 import io.keyflow.remotekeyboard.session.SessionAuthorization
 import java.time.Duration
@@ -24,7 +26,17 @@ class ProtocolInstrumentation : Instrumentation() {
 
     override fun onStart() {
         try {
-            if (options.containsKey("trustMode")) {
+            if (options.containsKey("lanMode")) {
+                val surface = if (options.getString("lanMode") == "clear") null else
+                    startActivitySync(Intent(targetContext, LanTestSurface::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                try {
+                    LanScenario.run(targetContext, options) { status ->
+                        sendStatus(1, Bundle().apply { putString("lanStatus", status) })
+                    }
+                } finally {
+                    if (surface != null) runOnMainSync { surface.finish() }
+                }
+            } else if (options.containsKey("trustMode")) {
                 TrustScenario.run(targetContext, options) { port ->
                     sendStatus(1, Bundle().apply { putInt("trustPort", port) })
                 }

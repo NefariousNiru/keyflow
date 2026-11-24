@@ -1,0 +1,312 @@
+package io.keyflow.remotekeyboard.network
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import io.keyflow.remotekeyboard.pairing.AndroidTrust
+import io.keyflow.remotekeyboard.pairing.AndroidTrustStore
+import io.keyflow.remotekeyboard.protocol.FrameCodec
+import io.keyflow.remotekeyboard.protocol.WireMessage
+import io.keyflow.remotekeyboard.session.SessionAuthorization
+import java.io.Closeable
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.IOException
+import java.net.Inet4Address
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.security.GeneralSecurityException
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import kotlin.random.Random
+
+internal enum class LanStatus {
+    SELECT_WIFI, UNTRUSTED_WIFI, PAIR_REQUIRED, CONNECTING, CONNECTED, NO_LOCAL_ADDRESS, LOCAL_ACCESS_BLOCKED
+}
+
+/** Foreground connection lifecycle. A new link always creates a new session. */
+internal class LanClient(
+    context: Context,
+    private val store: AndroidTrustStore = AndroidTrustStore(context),
+    private val changed: (LanStatus) -> Unit,
+    private val onFocus: (WireMessage.Focus) -> String? = { null }
+) : Closeable {
+    private val state = Any()
+    private val worker = executor("keyflow-connect")
+    private val timers = executor("keyflow-session-timers", threads = 2)
+    private val discovery = LanDiscovery(context.applicationContext)
+    private val connectivity = context.getSystemService(ConnectivityManager::class.java)
+    private val trust = AndroidTrust(store)
+
+    private var selection: WifiIdentity? = null
+    private var link: WifiLink? = null
+    private var manual: Inet4Address? = null
+    private var task: ScheduledFuture<*>? = null
+    private var socket: Socket? = null
+    private var generation = 0L
+    private var failures = 0
+    private var closed = false
+    private var pendingCode: CharArray? = null
+
+    fun configure(trusted: WifiIdentity?, current: WifiLink?, address: Inet4Address?) = synchronized(state) {
+        if (closed || (selection == trusted && link == current && manual == address)) return@synchronized
+        stopLocked()
+        selection = trusted
+        link = current
+        manual = address
+        failures = 0
+        startLocked()
+    }
+
+    fun updateLink(current: WifiLink?) = synchronized(state) { configure(selection, current, manual) }
+
+    fun pair(code: CharArray) = synchronized(state) {
+        require(code.size == 6 && code.all { it in '0'..'9' })
+        if (closed) return@synchronized
+        stopLocked()
+        pendingCode = code.copyOf()
+        startLocked()
+    }
+
+    fun revoke() = synchronized(state) {
+        if (closed) return@synchronized
+        stopLocked()
+        trust.revoke()
+        startLocked()
+    }
+
+    private fun startLocked() {
+        val selected = selection
+        if (selected == null) {
+            pendingCode?.fill(0.toChar())
+            pendingCode = null
+            changed(LanStatus.SELECT_WIFI)
+            return
+        }
+        val current = link
+        if (current == null || current.identity != selected) {
+            pendingCode?.fill(0.toChar())
+            pendingCode = null
+            changed(LanStatus.UNTRUSTED_WIFI)
+            return
+        }
+        scheduleLocked(0)
+    }
+
+    private fun scheduleLocked(delay: Long) {
+        val stamp = generation
+        task = worker.schedule({ attempt(stamp) }, delay, TimeUnit.MILLISECONDS)
+    }
+
+    private fun attempt(stamp: Long) {
+        val current: WifiLink
+        val address: Inet4Address?
+        val code: CharArray?
+        synchronized(state) {
+            if (generation != stamp || closed) return
+            current = link ?: return
+            address = manual
+            code = pendingCode
+            pendingCode = null
+        }
+        var retry = code == null
+        var established = false
+        try {
+            if (code == null && store.load()?.valid(java.time.Instant.now()) != true) {
+                retry = false
+                report(stamp, LanStatus.PAIR_REQUIRED)
+                return
+            }
+
+            report(stamp, LanStatus.CONNECTING)
+            val fallback = address?.takeIf(current::allows)
+            val discovered = if (current.vpn || (code != null && fallback != null)) emptyList() else try {
+                discovery.find(current).mapNotNull { it.address as? Inet4Address }.take(3)
+            } catch (_: SecurityException) {
+                // Discovery is optional. The explicit address still goes through link and TLS policy.
+                emptyList()
+            }
+            val choices = (discovered + listOfNotNull(fallback)).distinct()
+            if (choices.isEmpty()) {
+                report(stamp, if (address == null && !current.vpn) LanStatus.NO_LOCAL_ADDRESS
+                    else LanStatus.LOCAL_ACCESS_BLOCKED)
+                return
+            }
+
+            for (candidate in choices) {
+                val localSocket = Socket()
+                localSocket.use { connectionSocket ->
+                    synchronized(state) {
+                        if (closed || stamp != generation) return
+                        socket = connectionSocket
+                    }
+                    try {
+                        val port = if (code == null) LanPorts.SESSION else LanPorts.PAIRING
+                        if (!routeCurrent(current)) throw IOException("The default app route changed.")
+                        current.connect(InetSocketAddress(candidate, port), connectionSocket)
+                        if (!routeCurrent(current)) throw IOException("The default app route changed.")
+                        val authenticated = if (code == null) trust.reconnect(connectionSocket, candidate.hostAddress!!)
+                            else trust.pair(connectionSocket, candidate.hostAddress!!, code)
+                        retry = true
+                        authenticated.use { connection ->
+                            runSession(connection, stamp, current) {
+                                established = true
+                                report(stamp, LanStatus.CONNECTED)
+                            }
+                        }
+                    } catch (_: IOException) {
+                        // The current authenticated session has ended if it had reached ready.
+                    } catch (_: GeneralSecurityException) {
+                        // The current authenticated session has ended if it had reached ready.
+                    }
+                }
+                if (code != null || established || !isCurrent(stamp)) break
+            }
+            report(stamp, LanStatus.LOCAL_ACCESS_BLOCKED)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        } catch (_: SecurityException) {
+            report(stamp, LanStatus.LOCAL_ACCESS_BLOCKED)
+        } catch (_: IOException) {
+            report(stamp, LanStatus.LOCAL_ACCESS_BLOCKED)
+        } catch (_: GeneralSecurityException) {
+            report(stamp, LanStatus.PAIR_REQUIRED)
+            retry = false
+        } finally {
+            code?.fill(0.toChar())
+            synchronized(state) {
+                if (stamp == generation && !closed) {
+                    socket = null
+                    if (retry) {
+                        if (established) failures = 0
+                        scheduleLocked(retryDelay(failures))
+                        failures = minOf(failures + 1, 6)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun runSession(
+        connection: io.keyflow.remotekeyboard.pairing.TrustedConnection, stamp: Long, link: WifiLink,
+        ready: () -> Unit
+    ) {
+        val tls = connection.socket
+        tls.soTimeout = 35_000
+        val input = DataInputStream(tls.inputStream)
+        val output = DataOutputStream(tls.outputStream)
+        val writing = Any()
+        var sequence = 1L
+        var watchdog: ScheduledFuture<*>? = null
+
+        fun armWatchdog() {
+            watchdog?.cancel(false)
+            watchdog = timers.schedule({ tls.close() }, 35, TimeUnit.SECONDS)
+        }
+
+        fun emit(build: (Long) -> WireMessage.Session) = synchronized(writing) {
+            if (!isCurrent(stamp) || !routeCurrent(link) || !trust.checkAuthorization(connection)) {
+                tls.close()
+                return@synchronized
+            }
+            FrameCodec.write(output, build(sequence++))
+            output.flush()
+        }
+
+        armWatchdog()
+        var sendHeartbeat: ScheduledFuture<*>? = null
+        try {
+            if (FrameCodec.read(input) !is WireMessage.Hello) throw IOException("Missing desktop hello.")
+            val focus = FrameCodec.read(input) as? WireMessage.Focus ?: throw IOException("Missing desktop session.")
+            val session = SessionAuthorization(focus.id, connection.peer.localPairedAt, connection.peer.highWater)
+            if (!session.tryAccept(focus) || !trust.checkAuthorization(connection) || !isCurrent(stamp) || !routeCurrent(link))
+                throw IOException("Desktop authorization failed.")
+
+            FrameCodec.write(output, WireMessage.Hello(3))
+            output.flush()
+            armWatchdog()
+            ready()
+            sendHeartbeat = timers.scheduleWithFixedDelay({
+                try {
+                    emit { WireMessage.Heartbeat(focus.id, it) }
+                } catch (_: IOException) {
+                    tls.close()
+                } catch (_: GeneralSecurityException) {
+                    tls.close()
+                }
+            }, 10, 10, TimeUnit.SECONDS)
+            deliverFocus(focus, ::emit)
+            var focusGeneration = focus.generation
+            while (isCurrent(stamp)) {
+                val message = FrameCodec.read(input) as? WireMessage.Session ?: return
+                if (!routeCurrent(link) || !session.tryAccept(message) || !trust.checkAuthorization(connection)) return
+                when (message) {
+                    is WireMessage.Focus -> {
+                        if (message.generation <= focusGeneration) return
+                        focusGeneration = message.generation
+                        deliverFocus(message, ::emit)
+                    }
+                    is WireMessage.Heartbeat, is WireMessage.Pause, is WireMessage.Error -> Unit
+                    else -> return
+                }
+                armWatchdog()
+            }
+        } finally {
+            sendHeartbeat?.cancel(false)
+            watchdog?.cancel(false)
+        }
+    }
+
+    private fun deliverFocus(
+        focus: WireMessage.Focus, emit: ((Long) -> WireMessage.Session) -> Unit
+    ) {
+        if (!focus.active) return
+        val text = onFocus(focus) ?: return
+        emit { WireMessage.Text(focus.id, it, focus.generation, text) }
+    }
+
+    private fun routeCurrent(link: WifiLink): Boolean {
+        val active = connectivity.activeNetwork ?: return false
+        if (active != link.defaultNetwork) return false
+        val capabilities = connectivity.getNetworkCapabilities(active) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == link.vpn
+    }
+
+    private fun isCurrent(stamp: Long): Boolean = synchronized(state) { stamp == generation && !closed }
+
+    private fun report(stamp: Long, status: LanStatus) {
+        synchronized(state) { if (stamp == generation && !closed) changed(status) }
+    }
+
+    private fun stopLocked() {
+        generation++
+        socket?.close()
+        socket = null
+        task?.cancel(true)
+        task = null
+        pendingCode?.fill(0.toChar())
+        pendingCode = null
+    }
+
+    override fun close() {
+        synchronized(state) {
+            if (closed) return
+            stopLocked()
+            closed = true
+        }
+        worker.shutdownNow()
+        timers.shutdownNow()
+    }
+
+    companion object {
+        internal fun retryDelay(failures: Int, random: Random = Random.Default): Long {
+            val ceiling = minOf(30_000L, 1000L shl failures.coerceIn(0, 5))
+            return random.nextLong(ceiling / 2, ceiling + 1)
+        }
+
+        private fun executor(name: String, threads: Int = 1) = ScheduledThreadPoolExecutor(threads) { work ->
+            Thread(work, name).apply { isDaemon = true }
+        }.apply { removeOnCancelPolicy = true }
+    }
+}

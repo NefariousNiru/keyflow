@@ -3,5 +3,6 @@
     <application>
         <activity android:name=".ActivationProbeActivity" android:exported="true" />
         <activity android:name=".PairingProbeActivity" android:exported="true" android:permission="android.permission.DUMP" />
+        <activity android:name=".LanTestSurface" android:exported="false" />
     </application>
 </manifest>

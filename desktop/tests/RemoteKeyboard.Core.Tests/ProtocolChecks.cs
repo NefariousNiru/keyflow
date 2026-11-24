@@ -1,3 +1,5 @@
+using System.Net;
+using RemoteKeyboard.Core.Network;
 using RemoteKeyboard.Core.Pairing;
 using System.Buffers.Binary;
 using System.Text;
@@ -87,9 +89,25 @@ internal static class ProtocolChecks
         clock.Timestamp = SessionAuthorization.Lifetime.Ticks;
         Check(!session.IsAuthorized(), "Monotonic expiry was ignored.");
 
+        CheckLanScope();
         CheckPairingWindow();
         CheckInputSession();
         Console.WriteLine("Passed M1 framing, authorization, input-session and pairing-window checks.");
+    }
+
+    private static void CheckLanScope()
+    {
+        var scope = new LanScope(IPAddress.Parse("10.9.8.5"), 28);
+        Check(scope.AllowsPeer(IPAddress.Parse("10.9.8.2")), "On-link private peer rejected.");
+        string[] forbidden = ["10.9.8.0", "10.9.8.5", "10.9.8.15", "10.9.8.16", "192.168.0.2",
+            "127.0.0.1", "8.8.8.8", "224.0.0.251", "::1", "::ffff:10.9.8.2"];
+        foreach (string address in forbidden)
+            Check(!scope.AllowsPeer(IPAddress.Parse(address)), "Incorrect network scope admitted.");
+        var moved = new LanScope(IPAddress.Parse("10.9.8.21"), 28);
+        Check(!moved.AllowsPeer(IPAddress.Parse("10.9.8.2")), "Peer from the previous subnet was retained.");
+        Check(moved.AllowsPeer(IPAddress.Parse("10.9.8.22")), "Peer on the current subnet was rejected.");
+        Check(LanScope.IsPrivate(IPAddress.Parse("172.16.0.1")), "Private range was rejected.");
+        Check(!LanScope.IsPrivate(IPAddress.Parse("172.32.0.1")), "Public range was admitted.");
     }
 
     private static void CheckInputSession()

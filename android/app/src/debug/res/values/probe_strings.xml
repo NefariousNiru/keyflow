@@ -3,4 +3,5 @@
     <string name="probe_channel">Keyflow activation test</string>
     <string name="probe_notification">Open Keyflow test</string>
     <string name="pairing_probe">Keyflow pairing interoperability test</string>
+    <string name="lan_test_surface">Keyflow Wi-Fi validation</string>
 </resources>

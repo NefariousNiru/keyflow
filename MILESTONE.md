@@ -26,7 +26,10 @@ Production identity binding moves to M1, companion association and remaining act
 - [ ] Trusted Wi-Fi selection, interface/network callbacks, mDNS/NSD and manual IP entry; private firewall scope on Windows.
 - [ ] Per-network socket binding where permitted, reconnect/backoff, heartbeat/watchdog, sleep/resume and route-change handling.
 - [ ] Test changing IP, roaming, network loss, same SSID/different network, untrusted network, VPN with LAN allowed and VPN with LAN blocked, AP client isolation.
+- [x] Verify Public-profile refusal, off-subnet and mismatched Wi-Fi rejection, live phone network callbacks, session watchdog and held-key cleanup on route denial.
 - Development gate: reconnect without re-pairing inside authorization window; blocked LAN fails safely with meaningful status; no off-LAN input.
+
+M2 implementation is present. Keep the development gate open until the direct Wi-Fi harness pairs and reconnects with the original authorization, and confirms fail-closed behavior. The [M2 validation notes](docs/m2-validation.md) distinguish verified behavior from the remaining environment-dependent tests.
 
 ## M3 — Android keyboard and lifecycle
 - [ ] Implement keyboard renderer, key mapping, text commit, shortcuts/modifiers/repeat, layout rotation, haptics; setup and minimal permission/status UI.

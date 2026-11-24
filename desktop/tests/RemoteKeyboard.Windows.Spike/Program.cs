@@ -5,6 +5,12 @@ using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
+if (args is ["--lan-endpoint", var lanDirectory, var lanMode])
+{
+    await LanEndpoint.RunAsync(lanDirectory, lanMode);
+    return;
+}
+
 if (args is ["--trust-endpoint", var directory, var mode])
 {
     await TrustEndpoint.RunAsync(directory, mode);
@@ -16,6 +22,8 @@ if (args is ["--interactive"])
     NativeInputCheck.Run();
     return;
 }
+
+await PinnedTlsChecks.RunAsync();
 
 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -31,7 +39,6 @@ var pfx = generated.Export(X509ContentType.Pkcs12);
 using var certificate = X509CertificateLoader.LoadPkcs12(pfx, null, X509KeyStorageFlags.UserKeySet);
 CryptographicOperations.ZeroMemory(pfx);
 
-await PinnedTlsChecks.RunAsync();
 await CheckTlsAsync(SslProtocols.Tls12);
 if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
     await CheckTlsAsync(SslProtocols.Tls13);
