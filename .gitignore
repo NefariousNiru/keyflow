@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/build/
+**/.gradle/
+**/.kotlin/
+.vs/
+.idea/
+local.properties
+artifacts/
+*.user
+*.jks
+*.keystore

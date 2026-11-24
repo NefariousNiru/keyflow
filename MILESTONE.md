@@ -9,6 +9,8 @@ Follow AGENTS.md. Each gate is mandatory unless explicitly scoped experimental. 
 - [ ] Tiny Windows spike: UIA focus metadata and SendInput with ordinary apps; record elevated and secure desktop boundaries. Run on both Windows 10 22H2 and Windows 11; verify runtime, UIA, injection and TLS compatibility (TLS 1.2 ECDHE/AEAD on Windows 10; prefer TLS 1.3 on Windows 11). Record untested cases as pending.
 - Gate: documented activation matrix and viable secure pairing design; if auto-wake impossible on target device, keep notification fallback and explicitly record degraded UX.
 
+M0 initialization evidence is recorded in [the validation matrix](docs/m0-validation.md). The Windows Release build, synthetic focus-policy cases and self-contained publish passed on build 19045. Android debug APK assembly passed with JDK 17 and Android Platform 37. Android lint and unit tests remain pending. Pairing interoperability and physical OS/device validation remain open.
+
 ## M1 — Protocol and secure transport
 - [ ] Define versioned messages: handshake/capabilities, focus state/generation, key down/up, text commit, release-all, heartbeat, errors, pause. Strict limits and canonical key mapping.
 - [ ] Implement desktop core session lifecycle, OTP authenticated pairing, peer key pinning, TLS, 30-day expiry, revocation, secure-store abstraction.
