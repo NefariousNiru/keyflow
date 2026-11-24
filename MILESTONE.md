@@ -23,13 +23,13 @@ Production identity binding moves to M1, companion association and remaining act
 **Development gate closed.** The Windows 10 and LAVA end-to-end workflow paired, exchanged authenticated application frames and reconnected from persisted credentials. Negative security cases passed on the connected device and in component tests. The [M1 validation notes](docs/m1-validation.md) record commands, results and scope. Native LAN transport policy, production UI, Windows 11 and physical Samsung release validation remain tracked in subsequent milestones.
 
 ## M2 — LAN discovery, VPN and recovery
-- [ ] Trusted Wi-Fi selection, interface/network callbacks, mDNS/NSD and manual IP entry; private firewall scope on Windows.
-- [ ] Per-network socket binding where permitted, reconnect/backoff, heartbeat/watchdog, sleep/resume and route-change handling.
+- [x] Implement trusted Wi-Fi selection, interface/network callbacks, mDNS/NSD and manual IP entry, with scoped firewall setup for Private and explicitly selected Public Wi-Fi.
+- [x] Implement per-network binding where permitted, reconnect/backoff, heartbeat/watchdog, sleep/resume and route-change handling.
 - [ ] Test changing IP, roaming, network loss, same SSID/different network, untrusted network, VPN with LAN allowed and VPN with LAN blocked, AP client isolation.
-- [x] Verify Public-profile refusal, off-subnet and mismatched Wi-Fi rejection, live phone network callbacks, session watchdog and held-key cleanup on route denial.
+- [x] Verify refusal of Public Wi-Fi without explicit approval, off-subnet and mismatched Wi-Fi rejection, live phone network callbacks, session watchdog and held-key cleanup on route denial.
 - Development gate: reconnect without re-pairing inside authorization window; blocked LAN fails safely with meaningful status; no off-LAN input.
 
-M2 implementation is present. Keep the development gate open until the direct Wi-Fi harness pairs and reconnects with the original authorization, and confirms fail-closed behavior. The [M2 validation notes](docs/m2-validation.md) distinguish verified behavior from the remaining environment-dependent tests.
+**Development gate closed.** Windows 10 and LAVA paired over explicitly selected Public Wi-Fi, exchanged authenticated synthetic input and automatically reconnected after real Wi-Fi loss with the original authorization. The [M2 validation notes](docs/m2-validation.md) track pending Private mDNS/NSD, firewall enforcement, VPN, DHCP change, sleep/resume and cross-platform release checks.
 
 ## M3 — Android keyboard and lifecycle
 - [ ] Implement keyboard renderer, key mapping, text commit, shortcuts/modifiers/repeat, layout rotation, haptics; setup and minimal permission/status UI.
@@ -48,6 +48,7 @@ M2 implementation is present. Keep the development gate open until the direct Wi
 
 ## M5 — Hardening and performance
 - [ ] Threat model review, dependency/license audit, protocol fuzz/property tests, privacy inspection of app-owned storage and network captures with synthetic keys.
+- [ ] Add cool icongraphy to android app as well as windows app. use same icons. Style it like this for the name eveywhere: "KeyFlow"
 - [ ] Stress network interruptions, concurrent focus changes, stale messages, disconnect while modifier held, expiry while connected, malformed input, sleep and battery saver.
 - [ ] Measure latency, desktop idle CPU/memory and Android idle battery overhead with baseline and device details. Tune without weakening controls.
 - [ ] Verify no logging of user content and no external network calls; document residual risks (OS memory/dumps, trusted peer compromise, OEM limits).

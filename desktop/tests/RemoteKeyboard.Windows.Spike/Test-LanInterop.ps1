@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory)] [string]$Serial,
     [string]$Adb = 'adb',
+    [string]$PublicPhoneAddress,
     [string]$Harness = "$PSScriptRoot/../../../artifacts/m2-windows/RemoteKeyboard.Windows.Spike.exe"
 )
 $ErrorActionPreference = 'Stop'
@@ -47,13 +48,18 @@ function Verify-DesktopInput($Process) {
     if ((Line $Process 5000) -ne 'AUTHENTICATED') { throw 'The desktop did not accept synthetic authenticated input.' }
 }
 
-$desktop = Start-Captured $binary ('--lan-endpoint "' + $directory + '" pair')
+$endpointArguments = '--lan-endpoint "' + $directory + '" pair'
+if ($PublicPhoneAddress) {
+    if ($PublicPhoneAddress -notmatch '^(\d{1,3}\.){3}\d{1,3}$') { throw 'Invalid phone IPv4 address.' }
+    $endpointArguments += " $PublicPhoneAddress"
+}
+$desktop = Start-Captured $binary $endpointArguments
 $phone = $null
 $wifiDisabled = $false
 $grants = @()
 try {
     $first = Line $desktop 10000
-    if ($first -eq 'PRIVATE_WIFI_REQUIRED') { throw 'This machine has no eligible Private Wi-Fi profile.' }
+    if ($first -eq 'WIFI_SELECTION_REQUIRED') { throw 'No eligible Wi-Fi profile and phone address.' }
     if ($first -notmatch '^ADDRESS ([0-9.]+)$') { throw 'The LAN listener did not start.' }
     $address = $Matches[1]
     if ((Line $desktop 5000) -notmatch '^OTP ([0-9]{6})$') { throw 'The pairing window did not arm.' }
@@ -72,8 +78,10 @@ try {
     Run-Phone policy
     Run-Phone pair @('-e', 'lanOtp', $otp)
     Verify-DesktopInput $desktop
-    Run-Phone discover
-    Verify-DesktopInput $desktop
+    if (-not $PublicPhoneAddress) {
+        Run-Phone discover
+        Verify-DesktopInput $desktop
+    }
 
     $phone = Start-Captured $Adb "-s $Serial shell am instrument -w -r -e lanMode recovery -e trustNamespace $namespace -e lanAddress $address $runner"
     Expect-Status $phone CONNECTED

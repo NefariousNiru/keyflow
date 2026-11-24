@@ -7,15 +7,28 @@ using RemoteKeyboard.Windows.Network;
 
 internal static class LanEndpoint
 {
-    public static async Task RunAsync(string directory, string mode)
+    public static async Task RunAsync(string directory, string mode, string? publicPeer = null)
     {
         if (!System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(directory), "^keyflow-test-[0-9a-f]{16}$"))
             throw new ArgumentException("A dedicated LAN-test directory is required.");
 
-        var link = WindowsWifi.ListPrivate().SingleOrDefault();
-        if (link is null)
+        var link = WindowsWifi.ListEligible().SingleOrDefault(item => item.IsPublic == (publicPeer is not null));
+        var selected = link?.IsPublic == true ? link.SelectPublicPeer(publicPeer) : link?.Selection;
+        if (selected is null)
         {
-            Console.WriteLine("PRIVATE_WIFI_REQUIRED");
+            Console.WriteLine("WIFI_SELECTION_REQUIRED");
+            return;
+        }
+
+        if (mode == "public-policy")
+        {
+            if (link?.IsPublic != true || publicPeer is null || WindowsWifi.Find(link.Selection) is not null ||
+                link.SelectPublicPeer("8.8.8.8") is not null ||
+                WindowsWifi.Find(selected) is not { } scoped ||
+                !scoped.Allows(System.Net.IPAddress.Parse(publicPeer)) || scoped.Allows(link.Gateway))
+                throw new InvalidOperationException("Public Wi-Fi peer scope check failed.");
+
+            Console.WriteLine("PUBLIC_PEER_SCOPE_OK");
             return;
         }
 
@@ -25,7 +38,7 @@ internal static class LanEndpoint
         var trust = new DesktopTrust(store, pairing, TimeProvider.System);
         var host = new LanHost(trust, pairing, identity, new SyntheticInput(), syntheticFocus: true);
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(100));
-        var started = host.RunAsync(link.Selection, stop.Token);
+        var started = host.RunAsync(selected, stop.Token);
         try
         {
             for (int index = 0; host.Listening is null && index < 25; index++)

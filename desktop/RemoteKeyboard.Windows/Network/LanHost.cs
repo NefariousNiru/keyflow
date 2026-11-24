@@ -12,7 +12,7 @@ using RemoteKeyboard.Core.Sessions;
 
 namespace RemoteKeyboard.Windows.Network;
 
-/// <summary>Owns listeners and authenticated sessions for one explicitly selected Private Wi-Fi profile.</summary>
+/// <summary>Owns listeners and authenticated sessions for one explicitly selected Wi-Fi profile.</summary>
 public sealed class LanHost(
     DesktopTrust trust, PairingWindow pairing, X509Certificate2 certificate, ISessionInput input,
     bool syntheticFocus = false)
@@ -49,7 +49,7 @@ public sealed class LanHost(
                     if (activeLink == generation && WindowsWifi.Find(selection) is { } link)
                         await ListenAsync(link, generation.Token).ConfigureAwait(false);
                     else
-                        status = "Waiting for trusted Private Wi-Fi";
+                        status = "Waiting for selected Wi-Fi";
                 }
                 catch (OperationCanceledException) when (generation.IsCancellationRequested)
                 {
@@ -95,7 +95,7 @@ public sealed class LanHost(
         status = "Listening on trusted Wi-Fi";
 
         using var stay = CancellationTokenSource.CreateLinkedTokenSource(token);
-        bool discoveryRoute = link.UsesCurrentSystemRoute(link.Gateway);
+        bool discoveryRoute = !link.IsPublic && link.UsesCurrentSystemRoute(link.Gateway);
         var monitor = WatchLinkAsync(link, discoveryRoute, stay.Token);
         var reconnecting = AcceptAsync(reconnect, link, false, stay.Token);
         var pairingRequests = AcceptAsync(pair, link, true, stay.Token);
@@ -142,7 +142,7 @@ public sealed class LanHost(
     {
         using var ticks = new PeriodicTimer(TimeSpan.FromSeconds(2));
         while (await ticks.WaitForNextTickAsync(token).ConfigureAwait(false))
-            if (WindowsWifi.Find(link.Selection) != link || link.UsesCurrentSystemRoute(link.Gateway) != discoveryRoute)
+            if (WindowsWifi.Find(link.Selection) != link || (!link.IsPublic && link.UsesCurrentSystemRoute(link.Gateway)) != discoveryRoute)
                 return;
     }
 

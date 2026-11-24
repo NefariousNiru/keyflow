@@ -5,6 +5,12 @@ using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
+if (args is ["--lan-endpoint", var publicDirectory, var publicMode, var publicPeer])
+{
+    await LanEndpoint.RunAsync(publicDirectory, publicMode, publicPeer);
+    return;
+}
+
 if (args is ["--lan-endpoint", var lanDirectory, var lanMode])
 {
     await LanEndpoint.RunAsync(lanDirectory, lanMode);

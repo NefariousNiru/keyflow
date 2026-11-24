@@ -6,13 +6,21 @@ using RemoteKeyboard.Core.Network;
 
 namespace RemoteKeyboard.Windows.Network;
 
-public sealed record WifiSelection(Guid Profile, Guid Adapter);
+public sealed record WifiSelection(Guid Profile, Guid Adapter, string? PublicPeer = null);
 
 public sealed record WifiLink(
-    WifiSelection Selection, string Label, string InterfaceName, int Index, IPAddress Address, int PrefixLength, IPAddress Gateway)
+    WifiSelection Selection, string Label, string InterfaceName, int Index, IPAddress Address, int PrefixLength, IPAddress Gateway, bool IsPublic)
 {
     public bool Allows(IPAddress peer) =>
-        new LanScope(Address, PrefixLength).AllowsPeer(peer) && UsesCurrentSystemRoute(peer);
+        IsOnLink(peer) && UsesCurrentSystemRoute(peer) &&
+        (!IsPublic || string.Equals(Selection.PublicPeer, peer.ToString(), StringComparison.Ordinal));
+
+    public bool IsOnLink(IPAddress peer) => new LanScope(Address, PrefixLength).AllowsPeer(peer);
+
+    public WifiSelection? SelectPublicPeer(string? text) =>
+        IsPublic && IPAddress.TryParse(text, out var peer) && peer.ToString() == text && IsOnLink(peer)
+            ? Selection with { PublicPeer = text }
+            : null;
 
     public bool UsesCurrentSystemRoute(IPAddress destination) =>
         destination.AddressFamily == AddressFamily.InterNetwork &&
@@ -23,12 +31,12 @@ public sealed record WifiLink(
     private static extern uint GetBestInterface(uint destination, out uint bestInterface);
 }
 
-/// <summary>Uses the Windows profile identity and interface GUID, with a fresh Private-profile check.</summary>
+/// <summary>Uses the Windows profile identity and interface GUID, with a fresh profile-category and approved-endpoint check.</summary>
 public static class WindowsWifi
 {
     private static readonly Guid ManagerClass = new("dcb00c01-570f-4a9b-8d69-199fdba5723b");
 
-    public static IReadOnlyList<WifiLink> ListPrivate()
+    public static IReadOnlyList<WifiLink> ListEligible()
     {
         var adapters = NetworkInterface.GetAllNetworkInterfaces()
             .Where(adapter => adapter.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
@@ -48,7 +56,8 @@ public static class WindowsWifi
                 {
                     try
                     {
-                        if ((int)network.GetCategory() != 1) // NLM_NETWORK_CATEGORY_PRIVATE
+                        int category = network.GetCategory();
+                        if (category is not (0 or 1)) // Public and Private, excluding managed Domain profiles.
                             continue;
 
                         var profile = ((INetworkIdentity)network).GetNetworkId();
@@ -62,7 +71,7 @@ public static class WindowsWifi
                                 {
                                     var id = ((IConnectionIdentity)connection).GetAdapterId();
                                     var adapter = adapters.FirstOrDefault(item => Guid.TryParse(item.Id, out var parsed) && parsed == id);
-                                    if (adapter is not null && Build(adapter, profile, id, label) is { } link)
+                                    if (adapter is not null && Build(adapter, profile, id, label, category == 0) is { } link)
                                         result.Add(link);
                                 }
                                 finally
@@ -95,9 +104,14 @@ public static class WindowsWifi
     }
 
     public static WifiLink? Find(WifiSelection selection) =>
-        ListPrivate().FirstOrDefault(link => link.Selection == selection);
+        ListEligible()
+            .Where(link => link.Selection.Profile == selection.Profile && link.Selection.Adapter == selection.Adapter)
+            .Select(link => link.IsPublic
+                ? link.SelectPublicPeer(selection.PublicPeer) is { } selected ? link with { Selection = selected } : null
+                : selection.PublicPeer is null ? link : null)
+            .FirstOrDefault(link => link is not null);
 
-    private static WifiLink? Build(NetworkInterface adapter, Guid profile, Guid id, string label)
+    private static WifiLink? Build(NetworkInterface adapter, Guid profile, Guid id, string label, bool isPublic)
     {
         var properties = adapter.GetIPProperties();
         var ipv4 = properties.GetIPv4Properties();
@@ -114,7 +128,7 @@ public static class WindowsWifi
             return null;
         var selected = addresses[0];
         return new WifiLink(new WifiSelection(profile, id), label, adapter.Name, ipv4.Index,
-            selected.Address, selected.PrefixLength, gateways[0].Address);
+            selected.Address, selected.PrefixLength, gateways[0].Address, isPublic);
     }
     // GUID-valued methods cannot be read through NLM's late-bound automation interface.
     [ComImport, Guid("dcb00002-570f-4a9b-8d69-199fdba5723b"), InterfaceType(ComInterfaceType.InterfaceIsDual)]
