@@ -10,3 +10,4 @@ artifacts/
 *.user
 *.jks
 *.keystore
+*.hprof

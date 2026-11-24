@@ -2,4 +2,5 @@
     <string name="probe_wait">Keyflow activation test runs in 20 seconds.</string>
     <string name="probe_channel">Keyflow activation test</string>
     <string name="probe_notification">Open Keyflow test</string>
+    <string name="pairing_probe">Keyflow pairing interoperability test</string>
 </resources>
