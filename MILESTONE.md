@@ -48,7 +48,7 @@ Production identity binding moves to M1, companion association and remaining act
 
 ## M5 — Hardening and performance
 - [ ] Threat model review, dependency/license audit, protocol fuzz/property tests, privacy inspection of app-owned storage and network captures with synthetic keys.
-- [ ] Add cool icongraphy to android app as well as windows app. use same icons. Style it like this for the name eveywhere: "KeyFlow"
+- [ ] Add cool icongraphy to android app (icon + splash) as well as windows app. use same icons. Style it like this for the name eveywhere: "KeyFlow"
 - [ ] Stress network interruptions, concurrent focus changes, stale messages, disconnect while modifier held, expiry while connected, malformed input, sleep and battery saver.
 - [ ] Measure latency, desktop idle CPU/memory and Android idle battery overhead with baseline and device details. Tune without weakening controls.
 - [ ] Verify no logging of user content and no external network calls; document residual risks (OS memory/dumps, trusted peer compromise, OEM limits).
