@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using RemoteKeyboard.Core.Pairing;
 using RemoteKeyboard.Core.Protocol;
 
@@ -11,14 +12,16 @@ public static class LiveDesktopSession
 
     public static async Task RunAsync(
         DesktopTrust trust, TrustedConnection connection, ISessionInput input, Func<bool> linkAllowed,
-        bool syntheticFocus, CancellationToken cancellationToken)
+        bool syntheticFocus, CancellationToken cancellationToken, ChannelReader<bool>? focusEvents = null)
     {
         using var stopped = CancellationTokenSource.CreateLinkedTokenSource(connection.Cancellation, cancellationToken);
         var token = stopped.Token;
         var id = Guid.NewGuid();
         using var session = new DesktopInputSession(
             new SessionAuthorization(id, connection.Peer.PairedAt, connection.Peer.HighWater, TimeProvider.System), input);
-        session.SetFocus(1, syntheticFocus);
+        var sessionGate = new object();
+        long focusGeneration = 1;
+        session.SetFocus(focusGeneration, syntheticFocus);
         if (!Allowed())
             return;
 
@@ -52,12 +55,35 @@ public static class LiveDesktopSession
 
         async Task SendHeartbeatAsync()
         {
-            while (await heartbeat.WaitForNextTickAsync(token).ConfigureAwait(false))
+            var tick = heartbeat.WaitForNextTickAsync(token).AsTask();
+            var focus = focusEvents?.WaitToReadAsync(token).AsTask();
+            while (true)
             {
-                if (!Allowed())
+                if (focus is not null && await Task.WhenAny(tick, focus).ConfigureAwait(false) == focus)
+                {
+                    if (!await focus.ConfigureAwait(false))
+                    {
+                        focus = null;
+                        continue;
+                    }
+                    if (!Allowed())
+                        return;
+                    if (focusEvents!.TryRead(out bool active))
+                    {
+                        lock (sessionGate)
+                            session.SetFocus(++focusGeneration, active);
+                        await FrameCodec.WriteAsync(stream, new FocusState(id, sequence++, focusGeneration, active), token);
+                        await stream.FlushAsync(token);
+                    }
+                    focus = focusEvents.WaitToReadAsync(token).AsTask();
+                    continue;
+                }
+
+                if (!await tick.ConfigureAwait(false) || !Allowed())
                     return;
                 await FrameCodec.WriteAsync(stream, new Heartbeat(id, sequence++), token).ConfigureAwait(false);
                 await stream.FlushAsync(token).ConfigureAwait(false);
+                tick = heartbeat.WaitForNextTickAsync(token).AsTask();
             }
         }
 
@@ -72,8 +98,11 @@ public static class LiveDesktopSession
                     received = 0;
                     started = TimeProvider.System.GetTimestamp();
                 }
-                if (++received > 120 || !Allowed() || session.Receive(message) == InputResult.Disconnect)
+                if (++received > 120 || !Allowed())
                     return;
+                lock (sessionGate)
+                    if (session.Receive(message) == InputResult.Disconnect)
+                        return;
             }
         }
 

@@ -46,8 +46,8 @@ internal data class WifiLink(
     }
 }
 
-internal class WifiPreferences(context: Context) {
-    private val preferences = context.getSharedPreferences("trusted-wifi", Context.MODE_PRIVATE)
+internal class WifiPreferences(context: Context, name: String = "trusted-wifi") {
+    private val preferences = context.getSharedPreferences(name, Context.MODE_PRIVATE)
 
     fun load(): WifiIdentity? {
         val ssid = preferences.getString("ssid", null) ?: return null

@@ -1,23 +1,19 @@
 package io.keyflow.remotekeyboard
 
 import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,83 +22,132 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import io.keyflow.remotekeyboard.network.LanClient
+import io.keyflow.remotekeyboard.keyboard.CompanionAssociation
+import io.keyflow.remotekeyboard.keyboard.KeyboardRuntime
+import io.keyflow.remotekeyboard.keyboard.KeyboardService
+import io.keyflow.remotekeyboard.keyboard.KeyboardSettings
 import io.keyflow.remotekeyboard.network.LanStatus
 import io.keyflow.remotekeyboard.network.WifiIdentity
 import io.keyflow.remotekeyboard.network.WifiLink
 import io.keyflow.remotekeyboard.network.WifiMonitor
 import io.keyflow.remotekeyboard.network.WifiPreferences
 import io.keyflow.remotekeyboard.network.parseManualAddress
-import java.net.Inet4Address
 
 class MainActivity : ComponentActivity() {
     private var monitor: WifiMonitor? = null
     @Volatile private var monitorGeneration = 0L
-    private var client: LanClient? = null
     private lateinit var preferences: WifiPreferences
+    private lateinit var settings: KeyboardSettings
+    private lateinit var companion: CompanionAssociation
     private var selected by mutableStateOf<WifiIdentity?>(null)
     private var current by mutableStateOf<WifiLink?>(null)
-    private var status by mutableStateOf(LanStatus.SELECT_WIFI)
     private var permission by mutableStateOf(false)
+    private var notificationPermission by mutableStateOf(false)
     private var enteredAddress by mutableStateOf("")
-    private var manual: Inet4Address? = null
     private var code by mutableStateOf("")
+    private var wake by mutableStateOf(false)
+    private var haptics by mutableStateOf(true)
+    private var associationRevision by mutableStateOf(0)
+    private var bluetoothName by mutableStateOf("")
+    private var associationFailed by mutableStateOf(false)
 
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         restartMonitor()
+    }
+    private val approval = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+        if (it.resultCode != RESULT_OK) associationFailed = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         preferences = WifiPreferences(this)
+        settings = KeyboardSettings(this)
+        companion = CompanionAssociation(this)
         selected = preferences.load()
-        manual = preferences.loadManual()
-        enteredAddress = manual?.hostAddress ?: ""
+        enteredAddress = preferences.loadManual()?.hostAddress ?: ""
+        wake = settings.wake
+        haptics = settings.haptics
         setContent {
             MaterialTheme {
                 Surface {
                     Column(
-                        Modifier.fillMaxSize().systemBarsPadding().padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
                         if (!permission) {
                             Text(stringResource(R.string.wifi_permissions_message))
                             Button(onClick = ::requestWifiPermissions) { Text(stringResource(R.string.wifi_permissions)) }
                         } else {
-                            Text(stringResource(status.label()))
-                            val connected = current?.identity
+                            val service = KeyboardRuntime.service
+                            Text(stringResource(if (KeyboardRuntime.launchFailed) R.string.service_failed
+                                else if (service == null) R.string.service_stopped else KeyboardRuntime.status.label()))
+                            val connected = (KeyboardRuntime.link ?: current)?.identity
                             if (connected != null) Text(stringResource(R.string.wifi_current, connected.ssid.trim('"')))
-                            if (connected != null && connected != selected) {
-                                Button(onClick = { select(connected) }) { Text(stringResource(R.string.wifi_trust)) }
-                            }
-                            if (selected != null) {
+                            if (connected != null && connected != selected)
+                                TextButton(onClick = { select(connected) }) { Text(stringResource(R.string.wifi_trust)) }
+                            if (selected != null)
                                 TextButton(onClick = { select(null) }) { Text(stringResource(R.string.wifi_forget)) }
+
+                            OutlinedTextField(enteredAddress, {
+                                enteredAddress = it.take(15)
+                            }, label = { Text(stringResource(R.string.lan_ip)) }, singleLine = true,
+                                isError = enteredAddress.isNotBlank() && parseManualAddress(enteredAddress) == null)
+                            TextButton(enabled = enteredAddress.isBlank() || parseManualAddress(enteredAddress) != null,
+                                onClick = {
+                                    preferences.saveManual(parseManualAddress(enteredAddress))
+                                    service?.reloadNetwork()
+                                }) { Text(stringResource(R.string.lan_apply)) }
+
+                            Button(enabled = connected != null && connected == selected || service != null,
+                                onClick = {
+                                    if (service == null) startConnection() else stopService(Intent(this@MainActivity, KeyboardService::class.java))
+                                }) { Text(stringResource(if (service == null) R.string.service_start else R.string.service_stop)) }
+                            if (service != null) {
+                                OutlinedTextField(code, { code = it.filter { character -> character in '0'..'9' }.take(6) },
+                                    label = { Text(stringResource(R.string.pairing_code)) }, singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                                    visualTransformation = PasswordVisualTransformation())
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(enabled = KeyboardRuntime.link?.identity != null && KeyboardRuntime.link?.identity == selected && code.length == 6,
+                                        onClick = {
+                                            val password = code.toCharArray()
+                                            code = ""
+                                            try { service.pair(password) } finally { password.fill(0.toChar()) }
+                                        }) { Text(stringResource(R.string.lan_pair)) }
+                                    TextButton(onClick = { service.revoke(); associationRevision++ }) {
+                                        Text(stringResource(R.string.lan_revoke))
+                                    }
+                                }
                             }
 
-                            OutlinedTextField(enteredAddress, { enteredAddress = it.take(15) },
-                                label = { Text(stringResource(R.string.lan_ip)) }, singleLine = true,
-                                isError = enteredAddress.isNotBlank() && parseManualAddress(enteredAddress) == null)
-                            TextButton(
-                                enabled = enteredAddress.isBlank() || parseManualAddress(enteredAddress) != null,
-                                onClick = {
-                                    manual = parseManualAddress(enteredAddress)
-                                    preferences.saveManual(manual)
-                                    refresh()
+                            if (KeyboardRuntime.focus != null && service != null)
+                                Button(onClick = service::openManual) { Text(stringResource(R.string.keyboard_open)) }
+                            if (Build.VERSION.SDK_INT >= 33 && !notificationPermission)
+                                TextButton(onClick = { permissions.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS)) }) {
+                                    Text(stringResource(R.string.keyboard_notifications))
                                 }
-                            ) { Text(stringResource(R.string.lan_apply)) }
-
-                            OutlinedTextField(code, { code = it.filter { character -> character in '0'..'9' }.take(6) },
-                                label = { Text(stringResource(R.string.pairing_code)) }, singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                                visualTransformation = PasswordVisualTransformation())
-                            Button(enabled = connected != null && connected == selected && code.length == 6,
-                                onClick = {
-                                    val password = code.toCharArray()
-                                    code = ""
-                                    try { client?.pair(password) } finally { password.fill(0.toChar()) }
-                                }) { Text(stringResource(R.string.lan_pair)) }
-                            TextButton(onClick = { client?.revoke() }) { Text(stringResource(R.string.lan_revoke)) }
+                            val pin = KeyboardRuntime.peerPin
+                            val associated = androidx.compose.runtime.remember(pin, associationRevision) { companion.matches(pin) }
+                            if (pin != null && companion.supported()) {
+                                if (associated) Text(stringResource(R.string.keyboard_associated))
+                                else {
+                                    OutlinedTextField(bluetoothName, { bluetoothName = it.take(128) },
+                                        label = { Text(stringResource(R.string.keyboard_bluetooth_name)) }, singleLine = true)
+                                    TextButton(enabled = bluetoothName.isNotBlank(), onClick = { associate(pin) }) {
+                                        Text(stringResource(R.string.keyboard_associate))
+                                    }
+                                }
+                            }
+                            if (associationFailed) Text(stringResource(R.string.keyboard_association_failed))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Checkbox(wake, { wake = it; settings.wake = it })
+                                Text(stringResource(R.string.keyboard_wake), Modifier.padding(top = 12.dp))
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Checkbox(haptics, { haptics = it; settings.haptics = it })
+                                Text(stringResource(R.string.keyboard_haptics), Modifier.padding(top = 12.dp))
+                            }
                         }
                     }
                 }
@@ -112,8 +157,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        client = LanClient(this, changed = { value -> runOnUiThread { status = value } })
         restartMonitor()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        KeyboardRuntime.setupVisible = true
+    }
+
+    override fun onPause() {
+        KeyboardRuntime.setupVisible = false
+        super.onPause()
     }
 
     override fun onStop() {
@@ -121,8 +175,6 @@ class MainActivity : ComponentActivity() {
         monitor?.close()
         monitor = null
         current = null
-        client?.close()
-        client = null
         code = ""
         super.onStop()
     }
@@ -131,15 +183,22 @@ class MainActivity : ComponentActivity() {
         val stamp = ++monitorGeneration
         monitor?.close()
         permission = WifiMonitor.hasPermissions(this)
+        notificationPermission = Build.VERSION.SDK_INT < 33 ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         current = null
-        val controller = client
-        controller?.configure(selected, null, manual)
-        monitor = if (permission && controller != null) WifiMonitor(this) { link ->
-            if (monitorGeneration == stamp) {
-                controller.updateLink(link)
-                runOnUiThread { if (monitorGeneration == stamp) current = link }
-            }
+        monitor = if (permission) WifiMonitor(this) { link ->
+            runOnUiThread { if (monitorGeneration == stamp) current = link }
         } else null
+    }
+
+    private fun startConnection() {
+        try {
+            startForegroundService(Intent(this, KeyboardService::class.java))
+        } catch (_: IllegalStateException) {
+            KeyboardRuntime.launchFailed = true
+        } catch (_: SecurityException) {
+            KeyboardRuntime.launchFailed = true
+        }
     }
 
     private fun requestWifiPermissions() {
@@ -151,11 +210,14 @@ class MainActivity : ComponentActivity() {
     private fun select(wifi: WifiIdentity?) {
         preferences.save(wifi)
         selected = wifi
-        refresh()
+        KeyboardRuntime.service?.reloadNetwork()
     }
 
-    private fun refresh() {
-        client?.configure(selected, monitor?.current(), manual)
+    private fun associate(pin: ByteArray) {
+        associationFailed = false
+        companion.request(pin, bluetoothName.trim(), { KeyboardRuntime.peerPin },
+            askUser = { sender -> approval.launch(IntentSenderRequest.Builder(sender).build()) },
+            completed = { ok -> associationFailed = !ok; associationRevision++ })
     }
 
     private fun LanStatus.label(): Int = when (this) {

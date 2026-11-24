@@ -32,11 +32,12 @@ Production identity binding moves to M1, companion association and remaining act
 **Development gate closed.** Windows 10 and LAVA paired over explicitly selected Public Wi-Fi, exchanged authenticated synthetic input and automatically reconnected after real Wi-Fi loss with the original authorization. The [M2 validation notes](docs/m2-validation.md) track pending Private mDNS/NSD, firewall enforcement, VPN, DHCP change, sleep/resume and cross-platform release checks.
 
 ## M3 — Android keyboard and lifecycle
-- [ ] Implement keyboard renderer, key mapping, text commit, shortcuts/modifiers/repeat, layout rotation, haptics; setup and minimal permission/status UI.
-- [ ] Foreground service/notification and automatic activation controller; use supported lock-screen APIs only when eligible; fallback notification; dismiss suppression.
-- [ ] Test keyboard state, ordering, release-all, rotation, sleep, background, force-stop, reboot and physical Samsung lock-screen conditions. Pair and test with the Windows test harness.
-- [ ] Validate companion association eligibility and actual association, background launch exemptions, screen-off and secure-keyguard behavior, natural Doze, notification-tap fallback, and Samsung power management. Keep unsupported automatic activation cases on the notification fallback path.
-- Development gate: usable phone keyboard on the available Windows/Android workflow with an evidence-based activation matrix. Full target-device activation validation is required before release.
+- [x] Implement keyboard renderer, canonical key mapping, Unicode commits, shortcuts, sticky and held modifiers, repeat, rotation, haptics and setup controls.
+- [x] Implement foreground service, focus-scoped automatic activation and dismissal, Android companion chooser, opt-in wake/keyguard presentation and notification fallback.
+- [x] Run the Windows test harness and LAVA over Wi-Fi. Verify keyboard ordering, repeat, Unicode, rotation, dismissal, trusted reconnect, awake/background activation paths, screen-off focus, secure keyguard, forced Doze and no automatic service start after reboot.
+- [ ] Complete release validation of companion consent and launch exemption, associated opt-in wake and lock-screen presentation, force-stop and post-boot recovery, natural Doze and battery drain, notification permission variants, and Samsung lock-screen and battery management.
+
+**Development gate closed.** LAVA and Windows 10 demonstrated a usable keyboard over authenticated Wi-Fi, safe dismissal and reconnect, and the phone's foreground and notification activation paths. The [M3 validation notes](docs/m3-validation.md) identify the conditions exercised and the required release validation still open.
 
 ## M4 — Windows native integration
 - [ ] Interactive user agent, UIA editable focus detection and bounded click fallback, debounce, focus generation and session-lock monitor.

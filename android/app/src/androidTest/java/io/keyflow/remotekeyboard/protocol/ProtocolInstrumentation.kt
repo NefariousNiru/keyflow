@@ -26,7 +26,19 @@ class ProtocolInstrumentation : Instrumentation() {
 
     override fun onStart() {
         try {
-            if (options.containsKey("lanMode")) {
+            if (options.containsKey("m3Mode")) {
+                KeyboardChecks.models()
+                val surface = startActivitySync(Intent(targetContext, LanTestSurface::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                try {
+                    KeyboardChecks.physical(this, requireNotNull(options.getString("m3Mode")),
+                        requireNotNull(options.getString("trustNamespace")), requireNotNull(options.getString("lanAddress")),
+                        options.getString("lanOtp")) { status ->
+                        sendStatus(1, Bundle().apply { putString("keyboardStatus", status) })
+                    }
+                } finally {
+                    runOnMainSync { surface.finish() }
+                }
+            } else if (options.containsKey("lanMode")) {
                 val surface = if (options.getString("lanMode") == "clear") null else
                     startActivitySync(Intent(targetContext, LanTestSurface::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 try {
@@ -41,6 +53,7 @@ class ProtocolInstrumentation : Instrumentation() {
                     sendStatus(1, Bundle().apply { putInt("trustPort", port) })
                 }
             } else {
+                KeyboardChecks.models()
                 checkProtocol()
                 checkAuthorization()
             }

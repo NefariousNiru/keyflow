@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using System.ComponentModel;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -15,7 +16,7 @@ namespace RemoteKeyboard.Windows.Network;
 /// <summary>Owns listeners and authenticated sessions for one explicitly selected Wi-Fi profile.</summary>
 public sealed class LanHost(
     DesktopTrust trust, PairingWindow pairing, X509Certificate2 certificate, ISessionInput input,
-    bool syntheticFocus = false)
+    bool syntheticFocus = false, ChannelReader<bool>? focusEvents = null)
 {
     private readonly object state = new();
     private readonly SemaphoreSlim inputSession = new(1, 1);
@@ -168,7 +169,7 @@ public sealed class LanHost(
                 try
                 {
                     await LiveDesktopSession.RunAsync(trust, connection, input,
-                        () => CurrentLinkAllows(link, endpoint.Address), syntheticFocus, dispatch.Token).ConfigureAwait(false);
+                        () => CurrentLinkAllows(link, endpoint.Address), syntheticFocus, dispatch.Token, focusEvents).ConfigureAwait(false);
                 }
                 catch (ObjectDisposedException) when (dispatch.IsCancellationRequested)
                 {
