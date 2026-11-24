@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Keyflow</string>
+    <string name="wifi_permissions_message">Allow access to Wi-Fi identity and local devices to connect Keyflow.</string>
+    <string name="wifi_permissions">Allow Wi-Fi access</string>
+    <string name="wifi_trust">Trust current Wi-Fi</string>
+    <string name="wifi_forget">Forget trusted Wi-Fi</string>
+    <string name="lan_ip">Desktop IPv4 address (optional)</string>
+    <string name="lan_apply">Use address setting</string>
+    <string name="pairing_code">Desktop pairing code</string>
+    <string name="lan_pair">Pair desktop</string>
+    <string name="lan_revoke">Remove pairing</string>
+    <string name="lan_select">Select your trusted Wi-Fi.</string>
+    <string name="lan_untrusted">Trusted Wi-Fi unavailable. Check your Wi-Fi and location settings.</string>
+    <string name="lan_pair_required">Pairing required.</string>
+    <string name="lan_connecting">Connecting to desktop…</string>
+    <string name="lan_connected">Connected and authenticated.</string>
+    <string name="lan_no_address">Desktop discovery found no address. Enter the desktop IP.</string>
+    <string name="lan_blocked">Local access blocked or desktop unavailable. Check Wi-Fi, firewall or VPN policy.</string>
+    <string name="wifi_current">Current Wi-Fi %1$s</string>
+</resources>
